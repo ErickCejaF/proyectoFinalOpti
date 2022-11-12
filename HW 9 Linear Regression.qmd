@@ -6,8 +6,6 @@ editor: visual
 
 ## Module 3 - Activity 4
 
-### Linear Regression
-
 Of the models with a convex representation of their parametricestimation, generalized linear models (GLM) are a crucial case.The two most frequent examples of GLM are linear regression andlogistic regression. Therefore, in this activity, several linear regressionand logistic regression exercises will be solved with R software andsome of its packages.
 
 #### Activities Problem 1: Warm Up
@@ -78,7 +76,7 @@ auto %>%
 
 ##### c) Use the plot() function to produce diagnostic plots of the least squares regression fit. Comment on any problems you see with the fit.
 
-```{r}
+```{r fig.width=10,fig.height=11}
 linearmodelauto %>% performance::check_model()
 ```
 
