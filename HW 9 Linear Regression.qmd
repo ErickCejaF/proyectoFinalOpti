@@ -1,0 +1,85 @@
+---
+title: "Linear Regression"
+format: pdf
+editor: visual
+---
+
+## Module 3 - Activity 4
+
+### Linear Regression
+
+Of the models with a convex representation of their parametricestimation, generalized linear models (GLM) are a crucial case.The two most frequent examples of GLM are linear regression andlogistic regression. Therefore, in this activity, several linear regressionand logistic regression exercises will be solved with R software andsome of its packages.
+
+#### Activities Problem 1: Warm Up
+
+##### 1. Section 3.7 Problem 8.
+
+This question involves the use of simple linear regression on the Auto data set.
+
+##### a) Use the lm() function to perform a simple linear regression with mpg as the response and horsepower as the predictor. Use the summary() function to print the results. Comment on the output.
+
+Adding the necessary libraries
+
+```{r}
+#| warning: false
+library(ISLR2)
+library(tidymodels)
+library(dplyr)
+```
+
+Loading dataframe
+
+```{r}
+auto <- Auto
+head(auto)
+```
+
+The Auto df counts with 9 columns that show information of different models of vehicles. For the present exercise is intended to evaluate if exists any relationship
+
+```{r}
+linearmodelauto <- lm(mpg ~ horsepower, data = auto)
+linearmodelauto
+```
+
+-   Is there a relationship between the predictor and the response?
+
+    Yes there is a relationship between the variables
+
+```{r}
+summary(linearmodelauto)
+```
+
+-   How strong is the relationship between the predictor and the response
+
+    With the p values of the model (\<0.0001) we can assume that the model is significant to explain the relationship between our variables . Also the $R^{2}$ of 60% indicates that there is a highly correlation between this variables
+
+-   Is the relationship between the predictor and the response positive or negative?
+
+    The relationship is negative
+
+-   What is the predicted mpg associated with a horsepower of 98? What are the associated 95 % confidence and prediction intervals?
+
+```{r}
+predict(linearmodelauto, tibble(horsepower=98), interval = "confidence")
+```
+
+##### 
+
+b)  Plot the response and the predictor. Use the abline() functionto display the least squares regression line.
+
+```{r}
+auto %>%
+  ggplot(aes(x = horsepower)) +
+  geom_point(aes(y = mpg), size = 2, alpha = 0.4) +
+  geom_abline(slope = coef(linearmodelauto)["horsepower"],
+              intercept = coef(linearmodelauto)["(Intercept)"],
+              size = 2, color = "blue")
+```
+
+##### c) Use the plot() function to produce diagnostic plots of the least squares regression fit. Comment on any problems you see with the fit.
+
+```{r}
+linearmodelauto %>% performance::check_model()
+```
+
+#####  
