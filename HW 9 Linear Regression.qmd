@@ -23,6 +23,7 @@ Adding the necessary libraries
 library(ISLR2)
 library(tidymodels)
 library(dplyr)
+library(modelsummary)
 ```
 
 Loading dataframe
@@ -80,4 +81,74 @@ auto %>%
 linearmodelauto %>% performance::check_model()
 ```
 
-#####  
+#####  1. Section 3.7 Problem 9.
+
+This question involves the use of simple linear regression on the Auto data set.
+
+#### a)Produce a scatter-plot matrix which includes all of the variables in the data set.
+
+```{r fig.width=14,fig.height=12}
+#| warning: false
+p <- GGally::ggpairs(auto %>% select(-name))
+print(p,progress=F)
+```
+
+#### b)Compute the matrix of correlations between the variables using the function cor(). You will need to exclude the name variable, cor()which is qualitative.
+
+```{r}
+cor(auto %>% select(-name))
+```
+
+#### c)Use thelm() function to perform a multiple linear regression with mpgas the response and all other variables except name ast he predictors. Use thesummary() function to print the results.Comment on the output. For instance:
+
+```{r}
+multiplelinearmodel <- recipe(mpg ~ ., data = auto) %>% step_rm(name)
+
+mlrworkflow <- workflow() %>% add_recipe(multiplelinearmodel) %>% add_model(linear_reg())
+
+mlrworkflow
+```
+
+```{r}
+mlrfit <- mlrworkflow %>% fit(data = auto)
+mlrfitengine <- extract_fit_engine(mlrfit)
+summary(mlrfitengine)
+
+```
+
+1.  Is there a relationship between the predictors and the response?
+
+    There is a relationship between the predictors and the response ($p<0.001$) therefore the model can explain the relationship. Also the $R^2$ is \> 80% explaining a lot of variance with this model
+
+2.  Which predictors appear to have a statistically significant relationship to the response?
+
+    Displacement, Weight, Year, Origin
+
+3.  What does the coefficient for the $year$ variable suggest?
+
+    The relationship between the mpg and the year is positive recent years make that the miles per gallon performance increase
+
+#### d)Use theplot()function to produce diagnostic plots of the linearregression fit. Comment on any problems you see with the fit.Do the residual plots suggest any unusually large outliers? Doesthe leverage plot identify any observations with unusually high leverage?
+
+```{r fig.width=10,fig.height=11}
+mlrfit %>% extract_fit_engine() %>% performance::check_model()
+
+
+```
+
+#### e)Use the $*$ and **:** symbols to fit linear regression models with interaction effects. Do any interactions appear to be statistically significant?
+
+```{r}
+#| echo: false
+vintmodel<- as.formula(                      # Create formula
+  paste("mpg ~ ", paste(colnames(auto)[c(2,3,4,5,6,7,8)], collapse = " * ")))                                  # Print formula
+```
+
+```{r}
+#| warning: false
+multiplelinearmodelint <- lm(mpg ~ cylinders * displacement , data = auto)
+
+summary(multiplelinearmodelint)
+```
+
+#### f)Try a few different transformations of the variables, such aslog(X),√X,X2. Comment on your findings.
