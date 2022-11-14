@@ -1,6 +1,6 @@
 ---
 title: "Linear Regression"
-format: pdf
+format: html
 editor: visual
 ---
 
@@ -8,7 +8,7 @@ editor: visual
 
 Of the models with a convex representation of their parametricestimation, generalized linear models (GLM) are a crucial case.The two most frequent examples of GLM are linear regression andlogistic regression. Therefore, in this activity, several linear regressionand logistic regression exercises will be solved with R software andsome of its packages.
 
-#### Activities Problem 1: Warm Up
+### Activities Problem 1: Warm Up
 
 ##### 1. Section 3.7 Problem 8.
 
@@ -23,7 +23,16 @@ Adding the necessary libraries
 library(ISLR2)
 library(tidymodels)
 library(dplyr)
+library(gt)
 library(modelsummary)
+library(sjPlot)
+library(brms)
+library(glmmTMB)
+library(MASS)
+library(lme4)
+library(dunnr)
+library(parsnip)
+library(discrim)
 ```
 
 Loading dataframe
@@ -45,7 +54,7 @@ linearmodelauto
     Yes there is a relationship between the variables
 
 ```{r}
-summary(linearmodelauto)
+tab_model(linearmodelauto)
 ```
 
 -   How strong is the relationship between the predictor and the response
@@ -81,7 +90,7 @@ auto %>%
 linearmodelauto %>% performance::check_model()
 ```
 
-#####  1. Section 3.7 Problem 9.
+####  1. Section 3.7 Problem 9.
 
 This question involves the use of simple linear regression on the Auto data set.
 
@@ -89,14 +98,14 @@ This question involves the use of simple linear regression on the Auto data set.
 
 ```{r fig.width=14,fig.height=12}
 #| warning: false
-p <- GGally::ggpairs(auto %>% select(-name))
+p <- GGally::ggpairs(auto %>%dplyr::select(-name))
 print(p,progress=F)
 ```
 
 #### b)Compute the matrix of correlations between the variables using the function cor(). You will need to exclude the name variable, cor()which is qualitative.
 
 ```{r}
-cor(auto %>% select(-name))
+cor(auto %>% dplyr::select(-name))
 ```
 
 #### c)Use thelm() function to perform a multiple linear regression with mpgas the response and all other variables except name ast he predictors. Use thesummary() function to print the results.Comment on the output. For instance:
@@ -112,7 +121,7 @@ mlrworkflow
 ```{r}
 mlrfit <- mlrworkflow %>% fit(data = auto)
 mlrfitengine <- extract_fit_engine(mlrfit)
-summary(mlrfitengine)
+tab_model(mlrfitengine)
 
 ```
 
@@ -138,17 +147,342 @@ mlrfit %>% extract_fit_engine() %>% performance::check_model()
 
 #### e)Use the $*$ and **:** symbols to fit linear regression models with interaction effects. Do any interactions appear to be statistically significant?
 
-```{r}
-#| echo: false
-vintmodel<- as.formula(                      # Create formula
-  paste("mpg ~ ", paste(colnames(auto)[c(2,3,4,5,6,7,8)], collapse = " * ")))                                  # Print formula
-```
+None of the interactions are significant
 
 ```{r}
 #| warning: false
-multiplelinearmodelint <- lm(mpg ~ cylinders * displacement , data = auto)
+multiplelinearmodelint <- lm(mpg ~ cylinders * displacement * horsepower * weight * acceleration * 
+    year * origin , data = auto)
 
-summary(multiplelinearmodelint)
+
 ```
 
-#### f)Try a few different transformations of the variables, such aslog(X),√X,X2. Comment on your findings.
+#### 10. This question should be answered using the Carseats data set.
+
+#### (a) Fit a multiple regression model to predict Sales using Price, Urban, and US.
+
+```{r}
+carseats <- Carseats
+mlrcarseats <- lm(Sales ~ Price + Urban + US, data = carseats)
+tab_model(mlrcarseats)
+```
+
+#### b) Provide an interpretation of each coefficient in the model. Be careful---some of the variables in the model are qualitative!
+
+The price model show a negative relationship where the higher the price the lower the sales in a relation of -0.54 per dollar
+
+#### c) Write out the model in equation form, being careful to handle the qualitative variables
+
+$$\operatorname{Sales} = \alpha + \beta_{1}(\operatorname{Price}) + \beta_{2}(\operatorname{Urban}_{\operatorname{Yes}}) + \beta_{3}(\operatorname{US}_{\operatorname{Yes}}) + \epsilon$$
+
+#### d) For which of the predictors can you reject the null hypothesis $H0: Bj = 0$
+
+For Price and USyes we can reject the null hypothesis
+
+#### e) On the basis of your response to the previous question, fit a smaller model that only uses the predictors for which there is evidence of association with the outcome.
+
+```{r}
+mlrcarseatsless <- lm(Sales ~ Price + US, data = carseats)
+tab_model(mlrcarseats)
+
+```
+
+#### f) How well do the models in (a) and (e) fit the data?
+
+```{r}
+bind_rows(
+  bind_cols(model = "small", glance(mlrcarseatsless)),
+  bind_cols(model = "full", glance(mlrcarseats))
+) %>%
+  transmute(
+    model, R2 = round(r.squared, 3), RSE = round(sigma, 3)
+  ) %>%
+  gt()
+```
+
+#### g) Using the model from (e), obtain 95 % confidence intervals for the coefficient(s).
+
+```{r}
+tidy(mlrcarseatsless, conf.int = 0.95) %>%
+  transmute(
+    term, across(c(estimate, conf.low, conf.high), round, 3)
+  ) %>%
+  gt()
+```
+
+#### f) Is there evidence of outliers or high leverage observations in the model from (e)?
+
+There's no evidence of outliers or high leverage points
+
+```{r}
+mlrcarseatsless %>%
+  performance::check_model(check = "outliers")
+```
+
+##### 1. Section 4.8 Problem 13.
+
+This question should be answered using the Weekly data set, which is part of the ISLR2 package. This data is similar in nature to the Smarket data from this chapter's lab, except that it contains 1,089 weekly eturns for 21 years, from the beginning of 1990 to the end of 2010
+
+```{r}
+weekly <- Weekly
+head(weekly)
+```
+
+#### a) Produce some numerical and graphical summaries of the Weekly data. Do there appear to be any patterns?
+
+```{r}
+skimr::skim(weekly)
+```
+
+#### 
+
+```{r}
+#| warning: false
+weeklycormat <- round(x = cor(weekly[sapply(weekly,is.numeric)]),digits = 2)
+melted_cormat <- reshape2::melt(weeklycormat)
+head(melted_cormat)
+get_upper_tri <- function(weeklycormat){
+    weeklycormat[lower.tri(weeklycormat)]<- NA
+    return(weeklycormat)
+}
+upper_tri <- get_upper_tri(weeklycormat)
+library(reshape2)
+melted_cormat <- melt(upper_tri, na.rm = TRUE)
+```
+
+```{r}
+weekly %>% dplyr::select(-Direction) %>%
+  corrr::correlate(method = "pearson", quiet = TRUE) %>%
+  gt(rowname_col = "term") %>%
+  gt::sub_missing(columns = everything(), missing_text = "") %>%
+  gt::data_color(
+    columns = everything(),
+    colors = scales::col_numeric(
+      palette = td_pal("div5")(5),
+      domain = c(-0.1, 0.9)
+    )
+  ) %>%
+  gt::fmt_number(columns = everything(), decimals = 3)
+```
+
+```{r}
+weekly %>%
+  ggplot(aes(x = factor(Year), y = Volume)) +
+  geom_jitter(width = 0.3, color = "blue") +
+  geom_boxplot(alpha = 0.3, outlier.shape = NA, width = 0.2)
+```
+
+#### b) Use the full data set to perform a logistic regression with Direction as the response and the five lag variables plus Volume as predictors. Use the summary function to print the results. Do any of the predictors appear to be statistically significant? If so, which ones?
+
+```{r}
+weekly <- weekly %>% mutate(Direction = forcats::fct_rev(Direction))
+lr_weekly_fit <-
+  logistic_reg() %>%
+  fit(Direction ~ Year + Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume,
+      data = weekly)
+tab_model(lr_weekly_fit)
+  
+```
+
+#### c) Compute the confusion matrix and overall fraction of correct predictions. Explain what the confusion matrix is telling you about the types of mistakes made by logistic regression.
+
+```{r}
+lr_weekly_fit_conf_mat <- augment(lr_weekly_fit, weekly) %>%
+  conf_mat(truth = Direction, estimate = .pred_class)
+lr_weekly_fit_conf_mat
+```
+
+#### d) Now fit the logistic regression model using a training data period from 1990 to 2008, with Lag2 as the only predictor. Compute the confusion matrix and the overall fraction of correct predictions for the held out data (that is, the data from 2009 and 2010)
+
+```{r}
+weekly_train <- weekly %>% filter(Year <= 2008)
+weekly_test <- weekly %>% filter(Year > 2008)
+lr_weekly_fit_lag2 <-
+  logistic_reg() %>%
+  fit(Direction ~ Lag2, data = weekly_train)
+lr_weekly_fit_lag2_conf_mat <-
+  augment(lr_weekly_fit_lag2, weekly_test) %>%
+  conf_mat(truth = Direction, estimate = .pred_class)
+lr_weekly_fit_lag2_conf_mat
+```
+
+#### e) Repeat (d) using LDA.
+f) Repeat (d) using QDA.
+g) Repeat (d) using KNN with K = 1.
+h) Repeat (d) using naive Bayes
+
+```{r}
+model_fits <-
+  list(
+    "logistic" = lr_weekly_fit_lag2,
+    "LDA" = discrim_linear() %>% fit(Direction ~ Lag2, data = weekly_train),
+    "QDA" = discrim_quad() %>% fit(Direction ~ Lag2, data = weekly_train),
+    "KNN1" = nearest_neighbor(mode = "classification", neighbors = 1) %>%
+      fit(Direction ~ Lag2, data = weekly_train),
+    "NB" = naive_Bayes() %>% fit(Direction ~ Lag2, data = weekly_train)
+  )
+
+weekly_metrics <- metric_set(accuracy, sens, spec, ppv)
+imap_dfr(
+  model_fits,
+  ~augment(.x, new_data = weekly_test) %>%
+    weekly_metrics(truth = Direction, estimate = .pred_class),
+  .id = "model"
+) %>%
+  dplyr::select(model, .metric, .estimate) %>%
+  pivot_wider(names_from = .metric, values_from = .estimate) %>%
+  gt(rowname_col = "model") %>%
+  fmt_percent(columns = -model)
+```
+
+#### i) Which of these methods appears to provide the best results on this data?
+
+-   LDA and logistic regression performed exactly the same, and did the best.
+
+-   QDA predicted everything as \"Up\".
+
+-   KNN with 1 neighbor was a coin flip simulator.
+
+-   Naive Bayes did slightly worse than logistic and LDA.
+
+##### 1. Section 4.8 Problem 14.
+
+In this problem, you will develop a model to predict whether a given car gets high or low gas mileage based on the Auto data set
+
+#### a) Create a binary variable, mpg01, that contains a 1 if mpg contains a value above its median, and a 0 if mpg contains a value below its median. You can compute the median using the median() function. Note you may find it helpful to use the data.frame() function to create a single data set containing both mpg01 and the other Auto variables.
+
+```{r}
+auto <- ISLR2::Auto %>%
+  mutate(mpg01 = ifelse(mpg > median(mpg), 1, 0),
+         mpg01 = factor(mpg01))
+glimpse(auto)
+```
+
+```{r}
+auto <- auto %>%
+  mutate(origin = factor(origin, levels = 1:3,
+                         labels = c("American", "European", "Japanese")))
+```
+
+#### b) Explore the data graphically in order to investigate the association between mpg01 and the other features. Which of the other features seem most likely to be useful in predicting mpg01? Scatterplots and boxplots may be useful tools to answer this question. Describe your findings.
+
+```{r}
+library(dunnr)
+library(ggplot2)
+p = auto %>%
+  dplyr::select(-name, -origin, -mpg) %>%
+  pivot_longer(-mpg01, names_to = "var", values_to = "val") 
+p %>%
+  ggplot(aes(y = mpg01, x = val)) + geom_boxplot(aes(fill=factor(mpg01))) +  facet_wrap(~var,scales = "free_x") +  theme(legend.position = "none") 
+```
+
+```{r}
+auto %>%
+  count(origin, mpg01) %>%
+  ggplot(aes(y = origin, x = mpg01)) +
+  geom_tile(aes(fill = n)) +
+  geom_text(aes(label = n), color = "white") +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_discrete(expand = c(0, 0)) +
+  theme(legend.position = "none")
+```
+
+```{r}
+
+auto %>% dplyr::select(-name, -mpg01, -origin) %>%
+  corrr::correlate(method = "pearson", quiet = TRUE) %>%
+  gt(rowname_col = "term") %>%
+  gt::sub_missing(columns = everything(), missing_text = "") %>%
+  gt::data_color(
+    columns = everything(),
+    colors = scales::col_numeric( palette = td_pal("div5")(5),domain = c(-1, 1))
+  ) %>%
+  gt::fmt_number(columns = everything(), decimals = 2)
+```
+
+#### c) Split the data into a training set and a test set.
+
+```{r}
+set.seed(49)
+auto_split <- initial_split(auto, prop = 3 / 4)
+auto_train <- training(auto_split)
+auto_test <- testing(auto_split)
+```
+
+#### (d) Perform LDA on the training data in order to predict mpg01
+using the variables that seemed most associated with mpg01 in
+(b). What is the test error of the model obtained?
+(e) Perform QDA on the training data in order to predict mpg01
+using the variables that seemed most associated with mpg01 in
+(b). What is the test error of the model obtained?
+(f) Perform logistic regression on the training data in order to predict mpg01 using the variables that seemed most associated with
+mpg01 in (b). What is the test error of the model obtained?
+(g) Perform naive Bayes on the training data in order to predict
+mpg01 using the variables that seemed most associated with mpg01
+in (b). What is the test error of the model obtained?
+(h) Perform KNN on the training data, with several values of K, in
+order to predict mpg01. Use only the variables that seemed most
+associated with mpg01 in (b). What test errors do you obtain?
+Which value of K seems to perform the best on this data set?
+
+```{r}
+auto_recipe <- recipe(
+  mpg01 ~ cylinders + displacement + horsepower + weight + acceleration +
+    year + origin,  data = auto_train) %>%
+  # Normalize numerical predictors to work with KNN
+  step_normalize(all_numeric_predictors()) %>%
+  step_dummy(origin)
+auto_workflow <- workflow() %>%
+  add_recipe(auto_recipe)
+```
+
+```{r}
+model_fits <-
+  list(
+    "LDA" = auto_workflow %>%
+      add_model(discrim_linear()) %>%
+      fit(data = auto_train),
+    "QDA" = auto_workflow %>%
+      add_model(discrim_quad()) %>%
+      fit(data = auto_train),
+    "logistic" = auto_workflow %>%
+      add_model(logistic_reg()) %>%
+      fit(data = auto_train),
+    "NB" = auto_workflow %>%
+      add_model(naive_Bayes()) %>%
+      fit(data = auto_train),
+    "KNN1" = auto_workflow %>%
+      add_model(nearest_neighbor(mode = "classification", neighbors = 1)) %>%
+      fit(data = auto_train),
+    "KNN3" = auto_workflow %>%
+      add_model(nearest_neighbor(mode = "classification", neighbors = 3)) %>%
+      fit(data = auto_train),
+    "KNN5" = auto_workflow %>%
+      add_model(nearest_neighbor(mode = "classification", neighbors = 5)) %>%
+      fit(data = auto_train),
+    "KNN7" = auto_workflow %>%
+      add_model(nearest_neighbor(mode = "classification", neighbors = 7)) %>%
+      fit(data = auto_train)
+  )
+auto_metrics <- metric_set(accuracy, sens, spec, ppv)
+imap_dfr(
+  model_fits,
+  ~augment(.x, new_data = auto_test) %>%
+    auto_metrics(truth = mpg01, estimate = .pred_class),
+  .id = "model"
+) %>%
+  dplyr::select(model, .metric, .estimate) %>%
+  pivot_wider(names_from = .metric, values_from = .estimate) %>%
+  arrange(desc(accuracy)) %>%
+  gt(rowname_col = "model") %>%
+  fmt_percent(columns = -model, decimals = 1)
+```
+
+#### All models did well, but LDA and logistic regression were the best. There wasn\'t any difference in KNN accuracy for KK = 1, 3, 5, and 7.
+
+
+
+
+
+
+
