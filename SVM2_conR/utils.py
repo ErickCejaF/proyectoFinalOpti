@@ -9,6 +9,12 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 
+def query_data_csv(route):
+    total_data = pd.read_csv(route)
+    total_data = total_data.dropna()
+    return total_data
+
+
 def query_data_xlsx(route):
     total_data = pd.read_excel(route)
     total_data = total_data.dropna()
@@ -58,10 +64,10 @@ def obtain_n_number(data, pca, n):
     # Porcentaje de varianza explicada por cada componente principal proporciona
     per_var = np.round(pca.explained_variance_ratio_ * 100, decimals=1)
     # Porcentaje de varianza acumulado de los componentes
-    porcent_acum = np.cumsum(per_var)
+    print(np.cumsum(per_var))
 
 
-def get_n_principal_components(df_desc, df_TF, total_data, n):
+def get_n_principal_components(df_desc, df_TF, pca, total_data, n):
     # Nuevas variables,componentes principales
     pca_data = pca.transform(df_TF)
     # escogemos sólo los primeros n componentes

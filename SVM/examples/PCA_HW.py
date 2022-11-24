@@ -87,4 +87,4 @@ fig.show()
 # %%resultados
 for n in range(5):
     print("componente:", n + 1)
-    print(pca_data.sort_values(by=n)['FoodGroup'][:500].value_counts())
+    print(pca_data.sort_values(by=n)['label'][:500].value_counts())
