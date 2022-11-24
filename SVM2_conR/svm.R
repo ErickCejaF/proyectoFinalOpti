@@ -18,10 +18,9 @@ ggplot(data) +
 data$label <- as.factor(data$label)
 
 modelo_svm <- svm(formula = label ~ X1 + X2, data = data, kernel = "radial",
-                  cost = 0.5,gamma= 1, scale = FALSE)
+                  cost = 0.5, gamma = 1, scale = FALSE)
 
 plot(modelo_svm, data)
-
 
 
 # Para que la función svm() calcule el Support Vector Classifier,
@@ -83,23 +82,55 @@ ggplot() +
 # ------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------
 
-df <-  data.frame(read.csv(file = '/Users/erickcejafuentes/DataspellProjects/Optimizacion convexa/ProyectoFinal/SVM2_conR/music_data.csv'))
-head(df)
-
+library(tidyverse)
 library(caTools)
-set.seed(1234)
+library(caret)
+library(e1071)
+library(dplyr)
+
+df <- data.frame(read.csv(file = '/Users/erickcejafuentes/DataspellProjects/Optimizacion convexa/ProyectoFinal/SVM2_conR/music_data.csv'))
+df <- select(df, -2)
+
 split <- sample.split(df$label, SplitRatio = 0.80)
 training_set <- subset(df, split == TRUE)
 test_set <- subset(df, split == FALSE)
 
-# Feature Scaling 1 age, 2 is salary
-training_set[,1:13] <-  scale(training_set[,3:20])
-test_set[,1:13] <-  scale(test_set[,3:20])
+training_set[, 2:29] <- scale(training_set[, 2:29])
+test_set[, 2:29] <- scale(test_set[, 2:29])
 
-# install.packages("caret")
-library(caret)
-library(e1071)
-pca <- preProcess(x = training_set[-14], method = "pca", pcaComp = 2)
+pca <- preProcess(x = training_set[-1], method = "pca", pcaComp = 6)
+
 training_set <- predict(pca, training_set)
-# put customer segment in to the last postion or column
-training_set <- training_set[c(2,3,1)]
+training_set <- training_set[c(2, 3, 1)]
+training_set$label <- as.factor(training_set$label)
+
+test_set <- predict(pca, test_set)
+test_set <- test_set[c(2, 3, 1)]
+test_set$label <- as.factor(test_set$label)
+
+classifier <- svm(formula = label ~ .,
+                  data = training_set,
+                  type = "C-classification",
+                  kernel = "linear")
+
+summary(classifier)
+
+y_pred <- predict(classifier, newdata = test_set[-3])
+
+# Making the confusion matrix
+# [4] refers to the outcome
+cm <- table(test_set[, 3], y_pred)
+
+set <- training_set
+X1 <- seq(min(set[, 1]) - 1, max(set[, 1]) + 1, by = 0.01)
+X2 <- seq(min(set[, 2]) - 1, max(set[, 2]) + 1, by = 0.01)
+grid_set <- expand.grid(X1, X2)
+colnames(grid_set) <-  c('PC1', 'PC2')
+y_grid <- predict(classifier, newdata = grid_set)
+
+plot(set[, -3],
+     main = 'SVM (Training Set)',
+     xlab = 'PC1', ylab = 'PC2',
+     xlim = range(X1), ylim = range(X2))
+
+contour(X1, X2, matrix(as.numeric(y_grid), length(X1), length(X2)), add = TRUE)
