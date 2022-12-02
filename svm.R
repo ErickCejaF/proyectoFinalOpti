@@ -11,11 +11,16 @@ library(nnet)
 #--------------------------------------------------------------------------------------------------
 # Main code
 
+# working directory
+setwd("/Users/erickcejafuentes/DataspellProjects/Optimizacion convexa/ProyectoFinal")
+
 # reading the main file
-df <- data.frame(read.csv(file = '/music_data_country_blues.csv'))
+df <- data.frame(read.csv(file = 'datasets/music_data.csv'))
 
 # removing the second column
 df <- select(df, -2)
+
+########################################################################################################################
 
 # Splitting the train and set
 split <- sample.split(df$label, SplitRatio = 0.80)
@@ -28,8 +33,7 @@ test_set[, 2:29] <- scale(test_set[, 2:29])
 
 pca <- preProcess(x = training_set[-1], method = "pca", pcaComp = 2)
 
-# ---------------------------
-# ---------------------------
+########################################################################################################################
 
 training_set_predicted <- predict(pca, training_set)
 training_set_predicted <- training_set_predicted[c(2, 3, 1)]
@@ -39,6 +43,9 @@ test_set_predicted <- predict(pca, test_set)
 test_set_predicted <- test_set_predicted[c(2, 3, 1)]
 test_set_predicted$label <- as.factor(test_set_predicted$label)
 
+########################################################################################################################
+
+
 multinom_model <- multinom(label ~ ., data = training_set_predicted)
 
 multinom_pred <- predict(multinom_model, test_set_predicted)
@@ -47,10 +54,8 @@ confusion_matrix_info(multinom_pred, test_set_predicted)
 
 graph_mesh(training_set_predicted, multinom_model, "Multinomial training set")
 
-###
-# classifier
-
-# gamma music_data - 1 - 30 gamma
+########################################################################################################################
+# SVM classifier
 
 classifier <- svm(formula = label ~ .,
                   data = training_set_predicted,
@@ -62,10 +67,9 @@ classifier <- svm(formula = label ~ .,
 
 confusion_matrix_info(predict(classifier, newdata = test_set_predicted[-3]), test_set_predicted)
 
-
 graph_mesh(training_set_predicted, classifier, "SVM (Training Set)")
 
-
+########################################################################################################################
 #functions
 
 graph_mesh <- function(data_to_graph, classiffier_method, title) {
