@@ -12,7 +12,7 @@ library(nnet)
 # Main code
 
 # reading the main file
-df <- data.frame(read.csv(file = '/Users/erickcejafuentes/DataspellProjects/Optimizacion convexa/ProyectoFinal/SVM2_conR/music_data.csv'))
+df <- data.frame(read.csv(file = '/music_data_country_blues.csv'))
 
 # removing the second column
 df <- select(df, -2)
@@ -47,13 +47,17 @@ confusion_matrix_info(multinom_pred, test_set_predicted)
 
 graph_mesh(training_set_predicted, multinom_model, "Multinomial training set")
 
+###
+# classifier
+
+# gamma music_data - 1 - 30 gamma
+
 classifier <- svm(formula = label ~ .,
                   data = training_set_predicted,
                   type = "C-classification",
                   kernel = "radial",
-                  gamma = 30,
+                  gamma = 10,
                   cost = 1)
-
 
 
 confusion_matrix_info(predict(classifier, newdata = test_set_predicted[-3]), test_set_predicted)
@@ -89,52 +93,9 @@ graph_mesh <- function(data_to_graph, classiffier_method, title) {
 }
 
 confusion_matrix_info <- function(data, test_set) {
-  summary(data)
+  print(table(data, test_set$label))
 
   confusion_matrix <- confusionMatrix(data, test_set$label)
 
   print(paste(c(confusion_matrix$overall['Accuracy'] * 100, "% of accuracy"), collapse = " "))
 }
-
-# set <- data_to_graph
-#
-# X1 <- seq(min(set[, 1]) - 1, max(set[, 1]) + 1, by = 0.01)
-# X2 <- seq(min(set[, 2]) - 1, max(set[, 2]) + 1, by = 0.01)
-#
-# grid_set <- expand.grid(X1, X2)
-# colnames(grid_set) <- c('PC1', 'PC2')
-# y_grid <- predict(classiffier_method, newdata = grid_set)
-#
-# plot(set[, -3],
-#      main = title,
-#      xlab = 'PC1', ylab = 'PC2',
-#      xlim = range(X1), ylim = range(X2))
-#
-# # contour(X1, X2, matrix(as.numeric(y_grid), length(X1), length(X2)), add = TRUE)
-#
-# points(grid_set, pch = '.', col = ifelse(y_grid == "pop", 'deepskyblue',
-#                                          ifelse(y_grid == "hiphop", 'springgreen3',
-#                                                 ifelse(y_grid == "blues", 'blue',
-#                                                        ifelse(y_grid == "classical", 'purple',
-#                                                               ifelse(y_grid == "country", 'black',
-#                                                                      ifelse(y_grid == "disco", 'yellow',
-#                                                                             ifelse(y_grid == "jazz", 'white',
-#                                                                                    ifelse(y_grid == "metal", 'orange',
-#                                                                                           ifelse(y_grid == "reggae", 'springgreen3',
-#                                                                                                  ifelse(y_grid == "rock", 'springgreen3', 'tomato')))))))))))
-#
-# points(set, pch = 21,
-#        bg = ifelse(set[, 3] == "pop", 'deepskyblue',
-#                    ifelse(set[, 3] == "hiphop", 'springgreen3',
-#                           ifelse(set[, 3] == "blues", 'blue',
-#                                  ifelse(set[, 3] == "classical", 'purple',
-#                                         ifelse(set[, 3] == "country", 'black',
-#                                                ifelse(set[, 3] == "disco", 'yellow',
-#                                                       ifelse(set[, 3] == "jazz", 'white',
-#                                                              ifelse(set[, 3] == "metal", 'orange',
-#                                                                     ifelse(set[, 3] == "reggae", 'springgreen3',
-#                                                                            ifelse(set[, 3] == "rock", 'springgreen3', 'tomato')))))))))))
-
-
-
-
