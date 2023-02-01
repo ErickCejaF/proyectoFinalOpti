@@ -50,7 +50,8 @@ multinom_model <- multinom(label ~ ., data = training_set_predicted)
 
 multinom_pred <- predict(multinom_model, test_set_predicted)
 
-confusion_matrix_info(multinom_pred, test_set_predicted)
+confusion_matrix_tot <- confusion_matrix_info(multinom_pred, test_set_predicted)
+summary(confusion_matrix)
 
 graph_mesh(training_set_predicted, multinom_model, "Multinomial training set")
 
@@ -65,7 +66,7 @@ classifier <- svm(formula = label ~ .,
                   cost = 1)
 
 
-confusion_matrix_info(predict(classifier, newdata = test_set_predicted[-3]), test_set_predicted)
+cofwsfkgu <- confusion_matrix_info(predict(classifier, newdata = test_set_predicted[-3]), test_set_predicted)
 
 graph_mesh(training_set_predicted, classifier, "SVM (Training Set)")
 
@@ -102,4 +103,6 @@ confusion_matrix_info <- function(data, test_set) {
   confusion_matrix <- confusionMatrix(data, test_set$label)
 
   print(paste(c(confusion_matrix$overall['Accuracy'] * 100, "% of accuracy"), collapse = " "))
+
+  return(confusion_matrix)
 }
